@@ -31,3 +31,21 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Logs
+*.log
+logs/
+
+# Sistema operacional Mac
+.DS_Store
+
+# Variaveis de ambiente
+.env
+*.env
+
+# Configuracoes locais e de producao
+application-prod.properties
+application-local.properties
+
+# Docker override
+docker-compose.override.yml
