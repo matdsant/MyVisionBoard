@@ -3,6 +3,10 @@ package com.myvisionboard.app.controller;
 import com.myvisionboard.app.model.Note;
 import com.myvisionboard.app.service.NoteService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -13,15 +17,25 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/notes")
 @RequiredArgsConstructor
-@Tag(name = "Notes", description = "Gerenciamento de notas")
+@Tag(name = "Notas", description = "Gerenciamento de notas do usuário")
+@SecurityRequirement(name = "bearer-jwt")
 public class NoteController {
 
     private final NoteService noteService;
 
     @GetMapping
-    @Operation(summary = "Lista notas com paginacao e filtro")
+    @Operation(
+            summary = "Listar notas",
+            description = "Lista as notas do usuário com paginação e filtro por título"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Notas recuperadas com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Usuário não autenticado")
+    })
     public ResponseEntity<Page<Note>> findAll(
+            @Parameter(description = "Filtrar por título da nota")
             @RequestParam(required = false) String title,
+            @Parameter(description = "ID do usuário", required = true)
             @RequestParam String userId,
             Pageable pageable) {
 
@@ -32,22 +46,51 @@ public class NoteController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Busca uma nota pelo id")
-    public ResponseEntity<Note> findById(@PathVariable String id) {
+    @Operation(
+            summary = "Obter nota pelo ID",
+            description = "Recupera uma nota específica pelo seu identificador único"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Nota encontrada"),
+            @ApiResponse(responseCode = "404", description = "Nota não encontrada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<Note> findById(
+            @Parameter(description = "ID da nota", required = true)
+            @PathVariable String id) {
         return noteService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    @Operation(summary = "Cria uma nova nota")
+    @Operation(
+            summary = "Criar nova nota",
+            description = "Cria uma nova nota associada ao usuário autenticado"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Nota criada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
     public ResponseEntity<Note> create(@RequestBody Note note) {
         return ResponseEntity.ok(noteService.save(note));
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Atualiza uma nota pelo id")
-    public ResponseEntity<Note> update(@PathVariable String id, @RequestBody Note note) {
+    @Operation(
+            summary = "Atualizar nota",
+            description = "Atualiza os dados de uma nota existente"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Nota atualizada com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Nota não encontrada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<Note> update(
+            @Parameter(description = "ID da nota", required = true)
+            @PathVariable String id,
+            @RequestBody Note note) {
         return noteService.findById(id)
                 .map(existing -> {
                     existing.setTitle(note.getTitle());
@@ -59,8 +102,18 @@ public class NoteController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Apaga uma nota pelo id")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
+    @Operation(
+            summary = "Deletar nota",
+            description = "Remove uma nota do sistema"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Nota deletada com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Nota não encontrada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado")
+    })
+    public ResponseEntity<Void> delete(
+            @Parameter(description = "ID da nota", required = true)
+            @PathVariable String id) {
         return noteService.findById(id)
                 .map(existing -> {
                     noteService.deleteById(id);
