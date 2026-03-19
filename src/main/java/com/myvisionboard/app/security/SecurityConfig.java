@@ -54,6 +54,7 @@ public class SecurityConfig {
                                 "/v3/api-docs.json",
                                 "/v3/api-docs.yaml"
                         ).permitAll()
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
