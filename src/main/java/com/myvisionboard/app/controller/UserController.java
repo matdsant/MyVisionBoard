@@ -1,81 +1,82 @@
 package com.myvisionboard.app.controller;
 
+import com.myvisionboard.app.dto.request.UserRequest;
+import com.myvisionboard.app.dto.response.UserResponse;
 import com.myvisionboard.app.model.User;
 import com.myvisionboard.app.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
-@Tag(name = "Usuário", description = "Gerenciamento do perfil do usuário autenticado")
-@SecurityRequirement(name = "bearer-jwt")
+@Tag(name = "Usuario", description = "Gerenciamento do perfil do usuario autenticado")
+@SecurityRequirement(name = "Bearer Authentication")
 public class UserController {
 
     private final UserService userService;
 
     @GetMapping("/me")
-    @Operation(
-            summary = "Obter perfil do usuário",
-            description = "Retorna as informações do perfil do usuário autenticado"
-    )
+    @Operation(summary = "Obter perfil do usuario")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil recuperado com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
-            @ApiResponse(responseCode = "401", description = "Não autenticado")
+            @ApiResponse(responseCode = "404", description = "Usuario nao encontrado"),
+            @ApiResponse(responseCode = "401", description = "Nao autenticado")
     })
-    public ResponseEntity<User> me(
-            @Parameter(description = "Email do usuário autenticado", required = true)
-            @RequestParam String email) {
-        return userService.findByEmail(email)
-                .map(ResponseEntity::ok)
+    public ResponseEntity<UserResponse> me(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return userService.findByEmail(userDetails.getUsername())
+                .map(user -> ResponseEntity.ok(new UserResponse(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail(),
+                        user.getCreatedAt()
+                )))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/me")
-    @Operation(
-            summary = "Atualizar perfil",
-            description = "Atualiza os dados do perfil do usuário (nome e/ou senha)"
-    )
+    @Operation(summary = "Atualizar perfil")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil atualizado com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos"),
-            @ApiResponse(responseCode = "401", description = "Não autenticado")
+            @ApiResponse(responseCode = "404", description = "Usuario nao encontrado"),
+            @ApiResponse(responseCode = "401", description = "Nao autenticado")
     })
-    public ResponseEntity<User> update(
-            @Parameter(description = "Email do usuário autenticado", required = true)
-            @RequestParam String email,
-            @RequestBody User user) {
-        return userService.findByEmail(email)
+    public ResponseEntity<UserResponse> update(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody UserRequest request) {
+        return userService.findByEmail(userDetails.getUsername())
                 .map(existing -> {
-                    existing.setName(user.getName());
-                    return ResponseEntity.ok(userService.save(existing));
+                    existing.setName(request.getName());
+                    User saved = userService.save(existing);
+                    return ResponseEntity.ok(new UserResponse(
+                            saved.getId(),
+                            saved.getName(),
+                            saved.getEmail(),
+                            saved.getCreatedAt()
+                    ));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/me")
-    @Operation(
-            summary = "Deletar conta",
-            description = "Remove a conta do usuário e todos os seus dados associados"
-    )
+    @Operation(summary = "Deletar conta")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Conta deletada com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Usuário não encontrado"),
-            @ApiResponse(responseCode = "401", description = "Não autenticado")
+            @ApiResponse(responseCode = "404", description = "Usuario nao encontrado"),
+            @ApiResponse(responseCode = "401", description = "Nao autenticado")
     })
     public ResponseEntity<Void> delete(
-            @Parameter(description = "Email do usuário autenticado", required = true)
-            @RequestParam String email) {
-        return userService.findByEmail(email)
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return userService.findByEmail(userDetails.getUsername())
                 .map(existing -> {
                     userService.deleteById(existing.getId());
                     return ResponseEntity.noContent().<Void>build();

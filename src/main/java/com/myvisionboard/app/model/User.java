@@ -1,5 +1,6 @@
 package com.myvisionboard.app.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -30,6 +31,7 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<Note> notes = new ArrayList<>();
 
     @Column(name = "created_at", updatable = false)
