@@ -20,6 +20,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                         .withUsername(user.getEmail())
                         .password(user.getPassword())
                         .build())
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario nao encontrado: " + email));
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
     }
 }

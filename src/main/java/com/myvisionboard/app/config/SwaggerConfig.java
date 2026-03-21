@@ -16,7 +16,7 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("MyVisionBoard API")
-                        .description("Lista de chamadas para obter informacoes da aplicacao de notas")
+                        .description("List of endpoints to retrieve information from the notes application")
                         .version("v.1")
                 )
                 .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))

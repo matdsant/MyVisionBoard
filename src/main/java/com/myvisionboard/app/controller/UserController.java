@@ -18,18 +18,18 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
-@Tag(name = "Usuario", description = "Gerenciamento do perfil do usuario autenticado")
+@Tag(name = "User", description = "Authenticated user profile management")
 @SecurityRequirement(name = "Bearer Authentication")
 public class UserController {
 
     private final UserService userService;
 
     @GetMapping("/me")
-    @Operation(summary = "Obter perfil do usuario")
+    @Operation(summary = "Get user profile")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Perfil recuperado com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Usuario nao encontrado"),
-            @ApiResponse(responseCode = "401", description = "Nao autenticado")
+            @ApiResponse(responseCode = "200", description = "Profile successfully retrieved"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
     })
     public ResponseEntity<UserResponse> me(
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -44,11 +44,11 @@ public class UserController {
     }
 
     @PutMapping("/me")
-    @Operation(summary = "Atualizar perfil")
+    @Operation(summary = "Update profile")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Perfil atualizado com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Usuario nao encontrado"),
-            @ApiResponse(responseCode = "401", description = "Nao autenticado")
+            @ApiResponse(responseCode = "200", description = "Profile successfully updated"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
     })
     public ResponseEntity<UserResponse> update(
             @AuthenticationPrincipal UserDetails userDetails,
@@ -68,11 +68,11 @@ public class UserController {
     }
 
     @DeleteMapping("/me")
-    @Operation(summary = "Deletar conta")
+    @Operation(summary = "Delete account")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Conta deletada com sucesso"),
-            @ApiResponse(responseCode = "404", description = "Usuario nao encontrado"),
-            @ApiResponse(responseCode = "401", description = "Nao autenticado")
+            @ApiResponse(responseCode = "204", description = "Account successfully deleted"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "401", description = "Not authenticated")
     })
     public ResponseEntity<Void> delete(
             @AuthenticationPrincipal UserDetails userDetails) {

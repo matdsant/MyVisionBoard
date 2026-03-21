@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 public class UserRequest {
 
-    @NotBlank
+    @NotBlank(message = "Name is required")
     private String name;
 }

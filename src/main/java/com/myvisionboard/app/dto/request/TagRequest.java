@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 public class TagRequest {
 
-    @NotBlank
+    @NotBlank(message = "Name is required")
     private String name;
 }

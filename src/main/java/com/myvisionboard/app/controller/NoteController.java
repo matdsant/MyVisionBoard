@@ -1,6 +1,7 @@
 package com.myvisionboard.app.controller;
 
 import com.myvisionboard.app.dto.request.NoteRequest;
+import com.myvisionboard.app.dto.response.MessageResponse;
 import com.myvisionboard.app.dto.response.NoteResponse;
 import com.myvisionboard.app.model.Note;
 import com.myvisionboard.app.model.User;
@@ -19,20 +20,20 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/notes")
 @RequiredArgsConstructor
-@Tag(name = "Notas", description = "Gerenciamento de notas do usuario")
+@Tag(name = "Notes", description = "User note management")
 public class NoteController {
 
     private final NoteService noteService;
     private final UserService userService;
 
     @GetMapping
-    @Operation(summary = "Listar notas")
+    @Operation(summary = "List notes")
     public ResponseEntity<Page<Note>> findAll(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(required = false) String title,
             Pageable pageable) {
         User user = userService.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado"));
+                .orElseThrow(() -> new RuntimeException("User not found."));
         if (title != null && !title.isBlank()) {
             return ResponseEntity.ok(noteService.findByUserIdAndTitle(user.getId(), title, pageable));
         }
@@ -40,7 +41,7 @@ public class NoteController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obter nota pelo ID")
+    @Operation(summary = "Get note by ID")
     public ResponseEntity<Note> findById(@PathVariable String id) {
         return noteService.findById(id)
                 .map(ResponseEntity::ok)
@@ -48,12 +49,12 @@ public class NoteController {
     }
 
     @PostMapping
-    @Operation(summary = "Criar nova nota")
+    @Operation(summary = "Create new note")
     public ResponseEntity<NoteResponse> create(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody NoteRequest request) {
         User user = userService.findByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Usuario nao encontrado"));
+                .orElseThrow(() -> new RuntimeException("User not found."));
         Note note = Note.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
@@ -72,7 +73,7 @@ public class NoteController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Atualizar nota")
+    @Operation(summary = "Update note")
     public ResponseEntity<NoteResponse> update(
             @PathVariable String id,
             @RequestBody NoteRequest request) {
@@ -95,13 +96,14 @@ public class NoteController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Deletar nota")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
+    @Operation(summary = "Delete note")
+    public ResponseEntity<MessageResponse> delete(@PathVariable String id) {
         return noteService.findById(id)
                 .map(existing -> {
                     noteService.deleteById(id);
-                    return ResponseEntity.noContent().<Void>build();
+                    return ResponseEntity.ok(new MessageResponse("Note deleted successfully."));
                 })
-                .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.status(404)
+                        .body(new MessageResponse("Note not found.")));
     }
 }

@@ -16,24 +16,24 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(name = "Autenticação", description = "Endpoints de autenticação e registro de usuários")
+@Tag(name = "Authentication", description = "Endpoints for user authentication and registration")
 public class AuthController {
 
     private final AuthService authService;
 
     @PostMapping("/register")
     @Operation(
-            summary = "Registrar novo usuário",
-            description = "Cria uma nova conta de usuário no sistema"
+            summary = "Register new user",
+            description = "Creates a new user account in the system"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Usuário registrado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos"),
-            @ApiResponse(responseCode = "409", description = "Email já existente")
+            @ApiResponse(responseCode = "200", description = "User successfully registered"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data"),
+            @ApiResponse(responseCode = "409", description = "Email already exists")
     })
     public ResponseEntity<AuthResponse> register(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Dados para registro do usuário",
+                    description = "Data for user registration",
                     required = true
             )
             @Valid @RequestBody RegisterRequest request) {
@@ -42,17 +42,17 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(
-            summary = "Fazer login",
-            description = "Autentica o usuário e retorna um JWT token"
+            summary = "Login",
+            description = "Authenticates the user and returns a JWT token"
     )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Login realizado com sucesso"),
-            @ApiResponse(responseCode = "401", description = "Credenciais inválidas"),
-            @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos")
+            @ApiResponse(responseCode = "200", description = "Login successful"),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data")
     })
     public ResponseEntity<AuthResponse> login(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "Credenciais de login",
+                    description = "Login credentials",
                     required = true
             )
             @Valid @RequestBody LoginRequest request) {

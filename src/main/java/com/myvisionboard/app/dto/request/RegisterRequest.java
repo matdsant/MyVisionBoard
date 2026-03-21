@@ -7,20 +7,20 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-@Schema(description = "Dados para registro de novo usuário")
+@Schema(description = "Data for registering a new user")
 public class RegisterRequest {
 
-    @NotBlank(message = "Nome é obrigatório")
-    @Schema(description = "Nome completo do usuário", example = "João Silva")
+    @NotBlank(message = "Name is required")
+    @Schema(description = "User's full name", example = "John Doe")
     private String name;
 
-    @NotBlank(message = "Email é obrigatório")
-    @Email(message = "Email deve ser válido")
-    @Schema(description = "Email único do usuário", example = "joao@example.com")
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email must be valid")
+    @Schema(description = "Unique user email", example = "john@example.com")
     private String email;
 
-    @NotBlank(message = "Senha é obrigatória")
-    @Size(min = 6, message = "Senha deve ter no mínimo 6 caracteres")
-    @Schema(description = "Senha do usuário (mínimo 6 caracteres)", example = "senha123456")
+    @NotBlank(message = "Password is required")
+    @Size(min = 6, message = "Password must be at least 6 characters long")
+    @Schema(description = "User password (minimum 6 characters)", example = "password123456")
     private String password;
 }

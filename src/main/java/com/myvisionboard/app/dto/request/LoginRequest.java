@@ -6,15 +6,15 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-@Schema(description = "Dados de login do usuário")
+@Schema(description = "User login data")
 public class LoginRequest {
 
-    @NotBlank(message = "Email é obrigatório")
-    @Email(message = "Email deve ser válido")
-    @Schema(description = "Email do usuário", example = "usuario@example.com")
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email must be valid")
+    @Schema(description = "User email", example = "user@example.com")
     private String email;
 
-    @NotBlank(message = "Senha é obrigatória")
-    @Schema(description = "Senha do usuário", example = "senha123456")
+    @NotBlank(message = "Password is required")
+    @Schema(description = "User password", example = "password123456")
     private String password;
 }
