@@ -1,6 +1,7 @@
 package com.myvisionboard.app.controller;
 
 import com.myvisionboard.app.dto.request.UserRequest;
+import com.myvisionboard.app.dto.response.MessageResponse;
 import com.myvisionboard.app.dto.response.UserResponse;
 import com.myvisionboard.app.model.User;
 import com.myvisionboard.app.service.UserService;
@@ -70,17 +71,18 @@ public class UserController {
     @DeleteMapping("/me")
     @Operation(summary = "Delete account")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Account successfully deleted"),
+            @ApiResponse(responseCode = "200", description = "Account deleted successfully"),
             @ApiResponse(responseCode = "404", description = "User not found"),
-            @ApiResponse(responseCode = "401", description = "Not authenticated")
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
     })
-    public ResponseEntity<Void> delete(
+    public ResponseEntity<MessageResponse> delete(
             @AuthenticationPrincipal UserDetails userDetails) {
         return userService.findByEmail(userDetails.getUsername())
                 .map(existing -> {
                     userService.deleteById(existing.getId());
-                    return ResponseEntity.noContent().<Void>build();
+                    return ResponseEntity.ok(new MessageResponse("Account deleted successfully"));
                 })
-                .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.status(404)
+                        .body(new MessageResponse("User not found")));
     }
 }
