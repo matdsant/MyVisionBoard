@@ -17,6 +17,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashSet;
+
 @RestController
 @RequestMapping("/notes")
 @RequiredArgsConstructor
@@ -73,7 +75,7 @@ public class NoteController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Update note")
+    @Operation(summary = "Atualizar nota")
     public ResponseEntity<NoteResponse> update(
             @PathVariable String id,
             @RequestBody NoteRequest request) {
@@ -82,15 +84,14 @@ public class NoteController {
                     existing.setTitle(request.getTitle());
                     existing.setContent(request.getContent());
                     Note saved = noteService.save(existing);
-                    NoteResponse response = new NoteResponse(
+                    return ResponseEntity.ok(new NoteResponse(
                             saved.getId(),
                             saved.getTitle(),
                             saved.getContent(),
-                            null,
+                            new HashSet<>(),
                             saved.getCreatedAt(),
                             saved.getUpdatedAt()
-                    );
-                    return ResponseEntity.ok(response);
+                    ));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
