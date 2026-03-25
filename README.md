@@ -18,9 +18,9 @@ Uma API RESTful moderna para gerenciar seu quadro de visão pessoal, permitindo 
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Modelo de Dados](#modelo-de-dados)
 - [Autenticação](#autenticação)
-- [Rate Limiting](#rate-limiting)
 - [Documentação Interativa](#documentação-interativa)
 - [Docker](#docker)
+- [Desenvolvimento](#desenvolvimento)
 - [Contribuindo](#contribuindo)
 
 ---
@@ -29,51 +29,52 @@ Uma API RESTful moderna para gerenciar seu quadro de visão pessoal, permitindo 
 
 MyVisionBoard é uma plataforma que permite aos usuários:
 
-- 📝 **Criar e gerenciar notas** - Escreva, edite e organize suas ideias
-- 🏷️ **Organizar com tags** - Categorize suas notas para melhor busca e recuperação
-- 👤 **Autenticação segura** - Sistema de login/registro com JWT tokens
-- ⚡ **Rate limiting** - Proteção contra abuso de API
-- 🔄 **Caching Redis** - Melhor performance com cache distribuído
-- 🔐 **Spring Security** - Segurança em nível de aplicação
+- 📝 **Criar e gerenciar notas** — Escreva, edite e organize suas ideias com paginação e busca por título
+- 🏷️ **Organizar com tags** — Categorize suas notas com etiquetas reutilizáveis
+- 👤 **Autenticação segura** — Sistema de login/registro com JWT tokens stateless
+- 🔐 **Spring Security** — Segurança em nível de aplicação com BCrypt
+- 🔄 **Redis** — Infraestrutura de cache distribuído configurada e pronta
+- 📖 **Swagger/OpenAPI** — Documentação interativa disponível em `/swagger-ui`
 
 ---
 
 ## 🛠️ Tecnologias
 
 ### Backend
-- **Framework:** Spring Boot 4.0.3
-- **Linguagem:** Java 21
-- **Build Tool:** Maven
+| Tecnologia | Versão |
+|---|---|
+| Java | 21 |
+| Spring Boot | 4.0.3 |
+| Maven | 3.9 |
 
-### Banco de Dados
-- **PostgreSQL 16** - Armazenamento relacional de dados
-- **Redis 7** - Caching e performance
+### Banco de Dados e Cache
+| Tecnologia | Versão | Uso |
+|---|---|---|
+| PostgreSQL | 16 | Armazenamento relacional principal |
+| Redis | 7 | Cache distribuído |
 
 ### Segurança
-- **Spring Security** - Autenticação e autorização
-- **JWT (JJWT 0.12.6)** - Token-based authentication
-- **Lombok** - Redução de boilerplate code
+- **Spring Security** — Autenticação e autorização
+- **JJWT 0.12.6** — Geração e validação de tokens JWT
+- **BCrypt** — Criptografia de senhas
 
 ### Documentação
-- **SpringDoc OpenAPI 2.8.6** - Documentação Swagger/OpenAPI
-- **Swagger UI** - Interface interativa
+- **SpringDoc OpenAPI 2.8.6** — Geração automática da especificação OpenAPI
+- **Swagger UI** — Interface interativa de teste
 
-### Validação
-- **Spring Boot Validation** - Bean validation com Hibernate Validator
+### Utilitários
+- **Lombok** — Redução de boilerplate
+- **Spring Boot Validation** — Bean Validation (JSR-380)
 
 ---
 
 ## 📦 Pré-requisitos
 
-Antes de começar, você precisa ter instalado em sua máquina:
-
 - ✅ **Java 21** ou superior
 - ✅ **Maven 3.9** ou superior
-- ✅ **Docker** e **Docker Compose** (opcional, para ambiente containerizado)
-- ✅ **PostgreSQL 16** (ou via Docker)
-- ✅ **Redis 7** (ou via Docker)
-
-### Verificar Instalações
+- ✅ **Docker** e **Docker Compose** (recomendado para PostgreSQL e Redis)
+- ✅ **PostgreSQL 16** (local ou via Docker)
+- ✅ **Redis 7** (local ou via Docker)
 
 ```bash
 # Verificar Java
@@ -91,27 +92,28 @@ mvn -version
 
 ```bash
 git clone <seu-repositorio>
-cd myvisionboard
+cd MyVisionBoard
 ```
 
 ### 2. Instalar Dependências
 
 ```bash
-mvn clean install
+mvn clean install -DskipTests
 ```
 
 ---
 
 ## ⚙️ Configuração
 
-### Arquivo: `application.properties`
-
-O arquivo de configuração está localizado em `src/main/resources/application.properties`:
+### Arquivo: `src/main/resources/application.properties`
 
 ```properties
 # Aplicação
 spring.application.name=myvisionboard
 server.port=8080
+server.servlet.encoding.charset=UTF-8
+server.servlet.encoding.enabled=true
+server.servlet.encoding.force=true
 
 # Banco de Dados PostgreSQL
 spring.datasource.url=jdbc:postgresql://localhost:5432/myvisionboard
@@ -125,86 +127,66 @@ spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 
-# Redis Cache
+# Redis
 spring.data.redis.host=localhost
 spring.data.redis.port=6379
 
-# JWT Token
+# JWT
 jwt.secret=myvisionboard-secret-key-troque-por-uma-chave-segura
-jwt.expiration=86400000  # 24 horas em ms
-
-# Rate Limiting
-rate.limit.requests=10
-rate.limit.duration=60  # segundos
+jwt.expiration=86400000   # 24 horas em milissegundos
 
 # Swagger UI
 springdoc.swagger-ui.path=/swagger-ui
+springdoc.swagger-ui.tags-sorter=alpha
+springdoc.writer-with-default-pretty-printer=true
+springdoc.swagger-ui.disable-swagger-default-url=true
 ```
 
-### ⚠️ Configurações Importantes
+### ⚠️ Configurações Importantes para Produção
 
-Antes de colocar em produção, altere:
-
-1. **JWT Secret** - Use uma chave segura em produção
-2. **Credenciais do Banco** - Altere username e password
-3. **Rate Limiting** - Ajuste conforme necessário
-4. **DDL Auto** - Mude para `validate` em produção
+| Propriedade | Ação recomendada |
+|---|---|
+| `jwt.secret` | Substitua por uma chave forte e aleatória (mínimo 256 bits) |
+| `spring.datasource.password` | Use credenciais seguras |
+| `spring.jpa.hibernate.ddl-auto` | Altere para `validate` |
+| `spring.jpa.show-sql` | Defina como `false` |
+| `logging.level.org.springframework` | Reduza para `WARN` ou `ERROR` |
 
 ---
 
 ## 🚀 Como Executar
 
-### Opção 1: Sem Docker (Local)
+### Opção 1: Docker Compose (recomendado)
 
-#### Passo 1: Iniciar PostgreSQL e Redis
-
-```bash
-# PostgreSQL (macOS com Homebrew)
-brew install postgresql redis
-brew services start postgresql
-brew services start redis
-
-# Ou instale manualmente conforme sua OS
-```
-
-#### Passo 2: Executar a Aplicação
-
-```bash
-# Via Maven
-mvn spring-boot:run
-
-# A aplicação estará disponível em: http://localhost:8080
-```
-
-### Opção 2: Com Docker Compose
-
-#### Passo 1: Iniciar os Serviços
+Suba o PostgreSQL e o Redis com um único comando:
 
 ```bash
 docker-compose up -d
 ```
 
-Isso iniciará:
-- PostgreSQL na porta 5432
-- Redis na porta 6379
-
-#### Passo 2: Build e Executar a Aplicação
+Em seguida, execute a aplicação:
 
 ```bash
-# Build da aplicação
-mvn clean package
-
-# Executar com Java
-java -jar target/myvisionboard-0.0.1-SNAPSHOT.jar
+mvn spring-boot:run
 ```
 
-#### Verificar Logs
+A aplicação estará disponível em: **http://localhost:8080**
+
+### Opção 2: Serviços Locais
+
+Instale e inicie PostgreSQL e Redis manualmente conforme seu sistema operacional, então:
+
+```bash
+mvn spring-boot:run
+```
+
+### Verificar Logs do Docker
 
 ```bash
 docker-compose logs -f
 ```
 
-#### Parar os Serviços
+### Parar os Serviços Docker
 
 ```bash
 docker-compose down
@@ -214,11 +196,18 @@ docker-compose down
 
 ## 🔌 Endpoints da API
 
-A API segue o padrão RESTful. Todos os endpoints (exceto autenticação) requerem autenticação via JWT.
+> Todos os endpoints — exceto `/auth/**` — exigem autenticação via JWT no header:
+> ```
+> Authorization: Bearer {seu-token}
+> ```
+> O usuário autenticado é identificado **automaticamente pelo token**, sem necessidade de passar `userId` ou `email` como parâmetros.
 
-### 🔐 Autenticação (Auth) - `/auth`
+---
 
-#### 1. Registrar Novo Usuário
+### 🔐 Autenticação — `/auth`
+
+#### `POST /auth/register` — Registrar novo usuário
+
 ```http
 POST /auth/register
 Content-Type: application/json
@@ -226,50 +215,78 @@ Content-Type: application/json
 {
   "name": "João Silva",
   "email": "joao@example.com",
-  "password": "SenhaSegura123!"
+  "password": "SenhaSegura123"
 }
 ```
 
-**Resposta (200 OK):**
+> **Validações:** `name` obrigatório · `email` válido · `password` mínimo 6 caracteres
+
+**Resposta `200 OK`:**
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "email": "joao@example.com",
-  "name": "João Silva"
+  "name": "João Silva",
+  "email": "joao@example.com"
 }
 ```
 
-#### 2. Fazer Login
+**Erros:**
+- `400` — Dados inválidos
+- `409` — E-mail já cadastrado
+
+---
+
+#### `POST /auth/login` — Fazer login
+
 ```http
 POST /auth/login
 Content-Type: application/json
 
 {
   "email": "joao@example.com",
-  "password": "SenhaSegura123!"
+  "password": "SenhaSegura123"
 }
 ```
 
-**Resposta (200 OK):**
+**Resposta `200 OK`:**
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "email": "joao@example.com",
-  "name": "João Silva"
+  "name": "João Silva",
+  "email": "joao@example.com"
 }
 ```
 
+**Erros:**
+- `400` — Dados inválidos
+- `401` — Credenciais incorretas
+
 ---
 
-### 📝 Notas (Notes) - `/notes`
+### 📝 Notas — `/notes`
 
-#### 1. Listar Notas com Paginação
+#### `GET /notes` — Listar notas do usuário autenticado
+
+Suporta paginação e filtragem por título.
+
 ```http
-GET /notes?userId=123e4567-e89b-12d3-a456-426614174000&page=0&size=10
+GET /notes?page=0&size=10&sort=createdAt,desc
+Authorization: Bearer {token}
+
+# Com filtro por título:
+GET /notes?title=objetivo&page=0&size=10
 Authorization: Bearer {token}
 ```
 
-**Resposta (200 OK):**
+**Parâmetros de query:**
+| Parâmetro | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| `title` | string | não | Filtra notas cujo título contenha o valor (case-insensitive) |
+| `page` | int | não | Número da página (padrão: 0) |
+| `size` | int | não | Itens por página (padrão: 20) |
+| `sort` | string | não | Campo e direção, ex: `createdAt,desc` |
+
+**Resposta `200 OK`** (formato Spring `Page`):
 ```json
 {
   "content": [
@@ -278,46 +295,40 @@ Authorization: Bearer {token}
       "title": "Meu Objetivo 2026",
       "content": "Descrição detalhada do meu objetivo...",
       "tags": [
-        {
-          "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-          "name": "Carreira"
-        }
+        { "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "name": "Carreira" }
       ],
-      "createdAt": "2026-03-18T10:30:00",
-      "updatedAt": "2026-03-18T10:30:00"
+      "createdAt": "2026-03-25T10:30:00",
+      "updatedAt": "2026-03-25T10:30:00"
     }
   ],
   "totalElements": 25,
   "totalPages": 3,
-  "currentPage": 0
+  "size": 10,
+  "number": 0,
+  "first": true,
+  "last": false,
+  "empty": false
 }
 ```
 
-#### 2. Buscar Notas por Título
+---
+
+#### `GET /notes/{id}` — Buscar nota por ID
+
 ```http
-GET /notes?userId=123e4567-e89b-12d3-a456-426614174000&title=objetivo
+GET /notes/550e8400-e29b-41d4-a716-446655440000
 Authorization: Bearer {token}
 ```
 
-#### 3. Obter Nota Específica
-```http
-GET /notes/{noteId}
-Authorization: Bearer {token}
-```
+**Resposta `200 OK`:** objeto `Note` completo  
+**Erro `404`:** nota não encontrada
 
-**Resposta (200 OK):**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "title": "Meu Objetivo 2026",
-  "content": "Descrição detalhada...",
-  "tags": [...],
-  "createdAt": "2026-03-18T10:30:00",
-  "updatedAt": "2026-03-18T10:30:00"
-}
-```
+---
 
-#### 4. Criar Nova Nota
+#### `POST /notes` — Criar nova nota
+
+O autor é definido automaticamente pelo usuário autenticado no token.
+
 ```http
 POST /notes
 Authorization: Bearer {token}
@@ -326,156 +337,219 @@ Content-Type: application/json
 {
   "title": "Nova Nota",
   "content": "Conteúdo da nota",
-  "userId": "123e4567-e89b-12d3-a456-426614174000",
-  "tags": [
-    {
-      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
-    }
-  ]
+  "tagIds": ["6ba7b810-9dad-11d1-80b4-00c04fd430c8"]
 }
 ```
 
-**Resposta (200 OK):**
+> **Campos:** `title` obrigatório · `content` opcional · `tagIds` opcional (lista de IDs de tags existentes)
+
+**Resposta `200 OK`:**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "title": "Nova Nota",
   "content": "Conteúdo da nota",
-  "tags": [...],
-  "createdAt": "2026-03-18T10:30:00",
-  "updatedAt": "2026-03-18T10:30:00"
+  "tags": null,
+  "createdAt": "2026-03-25T10:30:00",
+  "updatedAt": "2026-03-25T10:30:00"
 }
 ```
 
-#### 5. Atualizar Nota
+---
+
+#### `PUT /notes/{id}` — Atualizar nota
+
 ```http
-PUT /notes/{noteId}
+PUT /notes/550e8400-e29b-41d4-a716-446655440000
 Authorization: Bearer {token}
 Content-Type: application/json
 
 {
   "title": "Nota Atualizada",
-  "content": "Novo conteúdo",
-  "tags": [...]
+  "content": "Novo conteúdo"
 }
 ```
 
-**Resposta (200 OK):** Nota atualizada
-
-#### 6. Deletar Nota
-```http
-DELETE /notes/{noteId}
-Authorization: Bearer {token}
+**Resposta `200 OK`:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "Nota Atualizada",
+  "content": "Novo conteúdo",
+  "tags": [],
+  "createdAt": "2026-03-25T10:30:00",
+  "updatedAt": "2026-03-25T11:00:00"
+}
 ```
 
-**Resposta (204 No Content)**
+**Erro `404`:** nota não encontrada
 
 ---
 
-### 🏷️ Tags (Tags) - `/tags`
+#### `DELETE /notes/{id}` — Deletar nota
 
-#### 1. Listar Todas as Tags
+```http
+DELETE /notes/550e8400-e29b-41d4-a716-446655440000
+Authorization: Bearer {token}
+```
+
+**Resposta `200 OK`:**
+```json
+{ "message": "Note deleted successfully." }
+```
+
+**Erro `404`:**
+```json
+{ "message": "Note not found." }
+```
+
+---
+
+### 🏷️ Tags — `/tags`
+
+#### `GET /tags` — Listar todas as tags
+
 ```http
 GET /tags
 Authorization: Bearer {token}
 ```
 
-**Resposta (200 OK):**
+**Resposta `200 OK`:**
 ```json
 [
-  {
-    "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-    "name": "Carreira",
-    "notes": [...]
-  },
-  {
-    "id": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
-    "name": "Saúde",
-    "notes": [...]
-  }
+  { "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "name": "Carreira" },
+  { "id": "6ba7b811-9dad-11d1-80b4-00c04fd430c8", "name": "Saúde" }
 ]
 ```
 
-#### 2. Obter Tag Específica
+---
+
+#### `GET /tags/{id}` — Buscar tag por ID
+
 ```http
-GET /tags/{tagId}
+GET /tags/6ba7b810-9dad-11d1-80b4-00c04fd430c8
 Authorization: Bearer {token}
 ```
 
-#### 3. Criar Nova Tag
+**Resposta `200 OK`:**
+```json
+{ "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8", "name": "Carreira" }
+```
+
+**Erro `404`:** tag não encontrada
+
+---
+
+#### `POST /tags` — Criar nova tag
+
+> Nomes de tag são **únicos** no sistema.
+
 ```http
 POST /tags
 Authorization: Bearer {token}
 Content-Type: application/json
 
-{
-  "name": "Educação"
-}
+{ "name": "Educação" }
 ```
 
-**Resposta (200 OK):** Tag criada
-
-#### 4. Atualizar Tag
-```http
-PUT /tags/{tagId}
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "name": "Desenvolvimento"
-}
+**Resposta `200 OK`:**
+```json
+{ "id": "uuid-gerado", "name": "Educação" }
 ```
 
-#### 5. Deletar Tag
-```http
-DELETE /tags/{tagId}
-Authorization: Bearer {token}
-```
-
-**Resposta (204 No Content)**
+**Erro `400`:** tag com esse nome já existe
 
 ---
 
-### 👤 Usuário (User) - `/user`
+#### `PUT /tags/{id}` — Atualizar tag
 
-#### 1. Obter Perfil Autenticado
 ```http
-GET /user/me?email=joao@example.com
+PUT /tags/6ba7b810-9dad-11d1-80b4-00c04fd430c8
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{ "name": "Desenvolvimento Pessoal" }
+```
+
+**Resposta `200 OK`:** tag atualizada  
+**Erro `404`:** tag não encontrada
+
+---
+
+#### `DELETE /tags/{id}` — Deletar tag
+
+```http
+DELETE /tags/6ba7b810-9dad-11d1-80b4-00c04fd430c8
 Authorization: Bearer {token}
 ```
 
-**Resposta (200 OK):**
+**Resposta `200 OK`:**
+```json
+{ "message": "Tag deleted successfully." }
+```
+
+**Erro `404`:**
+```json
+{ "message": "Tag not found." }
+```
+
+---
+
+### 👤 Usuário — `/user`
+
+> O usuário é identificado pelo token JWT. Não é necessário passar `email` ou `id` na URL.
+
+#### `GET /user/me` — Obter perfil
+
+```http
+GET /user/me
+Authorization: Bearer {token}
+```
+
+**Resposta `200 OK`:**
 ```json
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "name": "João Silva",
   "email": "joao@example.com",
-  "notes": [...],
-  "createdAt": "2026-03-18T10:30:00",
-  "updatedAt": "2026-03-18T10:30:00"
+  "createdAt": "2026-03-25T10:30:00"
 }
 ```
 
-#### 2. Atualizar Perfil
+**Erro `404`:** usuário não encontrado
+
+---
+
+#### `PUT /user/me` — Atualizar nome
+
 ```http
-PUT /user/me?email=joao@example.com
+PUT /user/me
 Authorization: Bearer {token}
 Content-Type: application/json
 
-{
-  "name": "João Silva Atualizado"
-}
+{ "name": "João Silva Atualizado" }
 ```
 
-**Resposta (200 OK):** Usuário atualizado
+**Resposta `200 OK`:** perfil atualizado (mesmo formato do `GET /user/me`)  
+**Erro `404`:** usuário não encontrado
 
-#### 3. Deletar Conta
+---
+
+#### `DELETE /user/me` — Excluir conta
+
 ```http
-DELETE /user/me?email=joao@example.com
+DELETE /user/me
 Authorization: Bearer {token}
 ```
 
-**Resposta (204 No Content)**
+**Resposta `200 OK`:**
+```json
+{ "message": "Account deleted successfully" }
+```
+
+**Erros:**
+- `401` — Não autenticado
+- `404` — Usuário não encontrado
 
 ---
 
@@ -485,44 +559,54 @@ Authorization: Bearer {token}
 src/
 ├── main/
 │   ├── java/com/myvisionboard/app/
-│   │   ├── Application.java                 # Classe principal Spring Boot
-│   │   ├── config/                          # Configurações
-│   │   │   ├── RateLimitConfig.java        # Limitação de taxa
-│   │   │   ├── RedisConfig.java            # Configuração Redis
-│   │   │   ├── SwaggerConfig.java          # Configuração OpenAPI
-│   │   │   └── WebConfig.java              # Configuração Web
-│   │   ├── controller/                      # REST Controllers
-│   │   │   ├── AuthController.java         # Login e Registro
-│   │   │   ├── NoteController.java         # Operações de Notas
-│   │   │   ├── TagController.java          # Operações de Tags
-│   │   │   └── UserController.java         # Perfil do Usuário
-│   │   ├── dto/                             # Data Transfer Objects
-│   │   │   ├── request/                    # DTOs de Requisição
-│   │   │   └── response/                   # DTOs de Resposta
-│   │   ├── model/                           # Entidades JPA
-│   │   │   ├── Note.java                   # Modelo de Nota
-│   │   │   ├── Tag.java                    # Modelo de Tag
-│   │   │   └── User.java                   # Modelo de Usuário
-│   │   ├── repository/                      # Spring Data Repositories
-│   │   │   ├── NoteRepository.java
+│   │   ├── Application.java                 # Ponto de entrada Spring Boot
+│   │   ├── config/
+│   │   │   ├── RateLimitConfig.java        # Rate limiting (atualmente desabilitado)
+│   │   │   ├── RedisConfig.java            # Template Redis
+│   │   │   ├── SwaggerConfig.java          # Configuração OpenAPI/Swagger
+│   │   │   └── WebConfig.java              # CORS (permite localhost:3000)
+│   │   ├── controller/
+│   │   │   ├── AuthController.java         # POST /auth/register e /auth/login
+│   │   │   ├── NoteController.java         # CRUD /notes
+│   │   │   ├── TagController.java          # CRUD /tags
+│   │   │   └── UserController.java         # Perfil /user/me
+│   │   ├── dto/
+│   │   │   ├── request/
+│   │   │   │   ├── LoginRequest.java       # email, password
+│   │   │   │   ├── NoteRequest.java        # title, content, tagIds
+│   │   │   │   ├── RegisterRequest.java    # name, email, password
+│   │   │   │   ├── TagRequest.java         # name
+│   │   │   │   └── UserRequest.java        # name
+│   │   │   └── response/
+│   │   │       ├── AuthResponse.java       # token, name, email
+│   │   │       ├── MessageResponse.java    # message
+│   │   │       ├── NoteResponse.java       # id, title, content, tags, createdAt, updatedAt
+│   │   │       ├── TagResponse.java        # id, name
+│   │   │       └── UserResponse.java       # id, name, email, createdAt
+│   │   ├── model/
+│   │   │   ├── Note.java                   # Entidade JPA — tabela notes
+│   │   │   ├── Tag.java                    # Entidade JPA — tabela tags
+│   │   │   └── User.java                   # Entidade JPA — tabela users
+│   │   ├── repository/
+│   │   │   ├── NoteRepository.java         # findByUserId, findByUserIdAndTitleContaining
 │   │   │   ├── TagRepository.java
 │   │   │   └── UserRepository.java
-│   │   ├── security/                        # Segurança e JWT
+│   │   ├── security/
 │   │   │   ├── CustomUserDetailsService.java
-│   │   │   ├── JwtAuthFilter.java
-│   │   │   ├── JwtService.java
-│   │   │   └── SecurityConfig.java
-│   │   └── service/                         # Lógica de Negócio
+│   │   │   ├── JwtAuthFilter.java          # Filtro JWT por requisição
+│   │   │   ├── JwtService.java             # Geração e validação de tokens
+│   │   │   └── SecurityConfig.java         # Regras de autorização
+│   │   └── service/
 │   │       ├── AuthService.java
 │   │       ├── NoteService.java
 │   │       ├── TagService.java
 │   │       └── UserService.java
 │   └── resources/
-│       └── application.properties           # Configurações
-├── test/java/...                            # Testes Unitários
-pom.xml                                      # Dependências Maven
-docker-compose.yaml                          # Orquestração Docker
-dockerfile                                   # Build Docker
+│       └── application.properties
+├── test/java/...
+pom.xml
+docker-compose.yaml
+dockerfile
 ```
 
 ---
@@ -531,83 +615,100 @@ dockerfile                                   # Build Docker
 
 ### Tabela: `users`
 | Campo | Tipo | Descrição |
-|-------|------|-----------|
-| id | UUID | Identificador único (gerado automaticamente) |
+|---|---|---|
+| id | UUID | Identificador único (auto-gerado) |
 | name | VARCHAR(255) | Nome do usuário |
-| email | VARCHAR(255) | Email único do usuário |
-| password | VARCHAR(255) | Senha criptografada |
+| email | VARCHAR(255) | E-mail único |
+| password | VARCHAR(255) | Senha criptografada com BCrypt |
 | created_at | TIMESTAMP | Data de criação |
 | updated_at | TIMESTAMP | Data da última atualização |
 
 ### Tabela: `notes`
 | Campo | Tipo | Descrição |
-|-------|------|-----------|
-| id | UUID | Identificador único |
-| title | VARCHAR(255) | Título da nota |
+|---|---|---|
+| id | UUID | Identificador único (auto-gerado) |
+| title | VARCHAR(255) | Título da nota (obrigatório) |
 | content | TEXT | Conteúdo da nota |
-| user_id | UUID | Referência ao usuário |
+| user_id | UUID | FK → users.id |
 | created_at | TIMESTAMP | Data de criação |
 | updated_at | TIMESTAMP | Data da última atualização |
 
 ### Tabela: `tags`
 | Campo | Tipo | Descrição |
-|-------|------|-----------|
-| id | UUID | Identificador único |
+|---|---|---|
+| id | UUID | Identificador único (auto-gerado) |
 | name | VARCHAR(255) | Nome único da tag |
 
-### Tabela: `note_tags` (Junção)
+### Tabela: `note_tags` (junção N:N)
 | Campo | Tipo | Descrição |
-|-------|------|-----------|
-| note_id | UUID | Referência à nota |
-| tag_id | UUID | Referência à tag |
+|---|---|---|
+| note_id | UUID | FK → notes.id |
+| tag_id | UUID | FK → tags.id |
 
 ### Relacionamentos
 ```
 User (1) ──── (N) Note
-Tag  (N) ──── (N) Note (muitos para muitos)
+Note (N) ──── (N) Tag   [via note_tags]
 ```
 
 ---
 
 ## 🔐 Autenticação
 
-### Sistema JWT (JSON Web Token)
+### Fluxo JWT
 
-A API utiliza JWT para autenticação stateless:
-
-1. **Login/Registro:** Cliente envia credenciais
-2. **Token Gerado:** Servidor retorna JWT assinado
-3. **Requisições:** Cliente inclui token no header `Authorization: Bearer {token}`
-4. **Validação:** Servidor valida assinatura e expiração
+```
+1. Cliente envia credenciais  →  POST /auth/login ou /auth/register
+2. Servidor valida e retorna  →  { token, name, email }
+3. Cliente armazena o token
+4. Em cada requisição        →  Authorization: Bearer {token}
+5. JwtAuthFilter intercepta  →  valida assinatura + expiração
+6. Usuário é identificado    →  via subject (email) do token
+```
 
 ### Header de Autenticação
 
 ```http
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-### Duração do Token
+### Configuração do Token
 
-- **Expiração:** 24 horas (86400000 ms)
-- Configurável em `jwt.expiration`
+| Propriedade | Valor padrão | Descrição |
+|---|---|---|
+| `jwt.secret` | `myvisionboard-secret-key-...` | Chave de assinatura HMAC-SHA |
+| `jwt.expiration` | `86400000` | Expiração em ms (24 horas) |
+
+### Rotas Públicas
+
+As seguintes rotas **não requerem** autenticação:
+
+```
+POST  /auth/register
+POST  /auth/login
+GET   /swagger-ui/**
+GET   /v3/api-docs/**
+GET   /error
+```
 
 ---
 
-## ⚡ Rate Limiting
+## 🌐 CORS
 
-### Proteção contra Abuso
+A aplicação está configurada para aceitar requisições cross-origin de:
 
-A API implementa rate limiting para proteger contra abuso:
+```
+http://localhost:3000
+```
 
-- **Limite:** 10 requisições
-- **Janela:** 60 segundos
-- **Status:** 429 (Too Many Requests) quando excedido
+Métodos permitidos: `GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`
 
-### Configuração
+Para adicionar outras origens, edite `WebConfig.java`:
 
-```properties
-rate.limit.requests=10
-rate.limit.duration=60
+```java
+registry.addMapping("/**")
+    .allowedOrigins("http://localhost:3000", "https://seu-frontend.com")
+    ...
 ```
 
 ---
@@ -616,21 +717,24 @@ rate.limit.duration=60
 
 ### Swagger UI
 
-Acesse a documentação interativa em:
+Acesse a interface interativa (sem autenticação necessária):
 
 ```
 http://localhost:8080/swagger-ui
 ```
 
-### OpenAPI JSON
+Para testar endpoints protegidos no Swagger UI:
+1. Execute `POST /auth/login`
+2. Copie o `token` da resposta
+3. Clique em **Authorize** (🔓) no topo
+4. Insira `Bearer {token}` e confirme
 
-O arquivo OpenAPI está disponível em:
+### OpenAPI JSON/YAML
 
 ```
 http://localhost:8080/v3/api-docs
+http://localhost:8080/v3/api-docs.yaml
 ```
-
-Você pode usar ferramentas como Postman, Insomnia ou cURL para testar os endpoints.
 
 ---
 
@@ -638,8 +742,10 @@ Você pode usar ferramentas como Postman, Insomnia ou cURL para testar os endpoi
 
 ### Dockerfile
 
+O build utiliza multi-stage:
+
 ```dockerfile
-# Build Stage
+# Stage 1: Build
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml .
@@ -647,7 +753,7 @@ RUN mvn dependency:go-offline -B
 COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Runtime Stage
+# Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/myvisionboard-0.0.1-SNAPSHOT.jar app.jar
@@ -661,76 +767,56 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 services:
   postgres:
     image: postgres:16
+    container_name: myvisionboard-postgres
     environment:
       POSTGRES_DB: myvisionboard
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7
+    container_name: myvisionboard-redis
     ports:
       - "6379:6379"
+
+volumes:
+  postgres_data:
 ```
 
-### Build e Deploy Docker
+### Comandos Docker
 
 ```bash
-# Build da imagem
-docker build -t myvisionboard:latest .
-
-# Executar container
-docker run -d \
-  --name myvisionboard \
-  -p 8080:8080 \
-  --link myvisionboard-postgres \
-  --link myvisionboard-redis \
-  myvisionboard:latest
-
-# Com docker-compose
+# Subir infraestrutura (PostgreSQL + Redis)
 docker-compose up -d
+
+# Ver logs
+docker-compose logs -f
+
+# Parar e remover containers
+docker-compose down
+
+# Parar e remover containers + volumes
+docker-compose down -v
+
+# Build manual da imagem da aplicação
+docker build -t myvisionboard:latest .
 ```
 
 ---
 
 ## 🛠️ Desenvolvimento
 
-### Dependências Principais
-
-```xml
-<!-- Spring Boot Web -->
-<spring-boot-starter-web>
-
-<!-- Spring Security -->
-<spring-boot-starter-security>
-
-<!-- Spring Data JPA -->
-<spring-boot-starter-data-jpa>
-
-<!-- Spring Data Redis -->
-<spring-boot-starter-data-redis>
-
-<!-- JWT -->
-<jjwt>
-
-<!-- PostgreSQL -->
-<postgresql>
-
-<!-- Lombok -->
-<lombok>
-
-<!-- SpringDoc OpenAPI -->
-<springdoc-openapi-starter-webmvc-ui>
-```
-
-### Build da Aplicação
+### Build
 
 ```bash
 # Compile e empacote
 mvn clean package
 
-# Pular testes
+# Sem rodar testes
 mvn clean package -DskipTests
 
 # Apenas compilar
@@ -743,108 +829,114 @@ mvn clean compile
 # Todos os testes
 mvn test
 
-# Testes específicos
-mvn test -Dtest=NoteServiceTest
+# Teste específico
+mvn test -Dtest=ApplicationTests
 ```
 
-### IDE Recomendadas
+### Dependências Principais
 
-- **IntelliJ IDEA Community** (recomendado para Java/Spring)
-- **Visual Studio Code** com extensões Java
-- **Eclipse IDE**
+| Dependência | Versão | Finalidade |
+|---|---|---|
+| spring-boot-starter-web | 4.0.3 | REST API |
+| spring-boot-starter-security | 4.0.3 | Segurança |
+| spring-boot-starter-data-jpa | 4.0.3 | Persistência ORM |
+| spring-boot-starter-data-redis | 4.0.3 | Cache Redis |
+| spring-boot-starter-validation | 4.0.3 | Bean Validation |
+| jjwt-api | 0.12.6 | JWT |
+| postgresql | runtime | Driver JDBC |
+| lombok | — | Boilerplate |
+| springdoc-openapi-starter-webmvc-ui | 2.8.6 | Swagger/OpenAPI |
 
----
+### IDEs Recomendadas
 
-## 🤝 Contribuindo
-
-### Fluxo de Contribuição
-
-1. **Fork** o repositório
-2. **Crie** uma branch para sua feature (`git checkout -b feature/MinhaFeature`)
-3. **Commit** suas mudanças (`git commit -m 'Adiciona MinhaFeature'`)
-4. **Push** para a branch (`git push origin feature/MinhaFeature`)
-5. **Abra** um Pull Request
-
-### Padrões de Código
-
-- Siga as convenções Java
-- Use nomes descritivos em português ou inglês
-- Adicione JavaDoc para métodos públicos
-- Escreva testes para novas features
-- Mantenha as classes pequenas e focadas
-
----
-
-## 📝 Licença
-
-Este projeto está sob licença MIT. Veja o arquivo LICENSE para mais detalhes.
-
----
-
-## 📧 Suporte
-
-Para dúvidas ou problemas:
-
-- Abra uma **Issue** no repositório
-- Envie um **Email** para suporte@example.com
-- Consulte a **Documentação Swagger** em `/swagger-ui`
+- **IntelliJ IDEA** (Community ou Ultimate) — melhor suporte a Spring
+- **VS Code** com extensões: _Extension Pack for Java_, _Spring Boot Extension Pack_
+- **Eclipse IDE for Enterprise Java Developers**
 
 ---
 
 ## 🔧 Troubleshooting
 
-### Problema: Connection refused para PostgreSQL
+### Porta 8080 já em uso
 
-**Solução:**
 ```bash
-# Verifique se PostgreSQL está rodando
-brew services list
-
-# Se não estiver, inicie
-brew services start postgresql
-```
-
-### Problema: Redis Connection refused
-
-**Solução:**
-```bash
-# Verifique e inicie Redis
-brew services start redis
-```
-
-### Problema: Porta 8080 já em uso
-
-**Solução:**
-```bash
-# Altere em application.properties
-server.port=8081
-
-# Ou mate o processo que está usando a porta
+# Descobrir o processo
 lsof -i :8080
+
+# Encerrar
 kill -9 <PID>
+
+# Ou alterar a porta em application.properties
+server.port=8081
 ```
 
-### Problema: JWT Invalid
+### Connection refused — PostgreSQL
 
-**Solução:**
-- Verifique se o token não expirou (24 horas)
-- Verifique se está incluindo `Bearer ` antes do token
-- Verifique se a secret key está correta
+```bash
+# Verificar se o container está rodando
+docker ps
+
+# Restartar
+docker-compose restart postgres
+```
+
+### Connection refused — Redis
+
+```bash
+docker-compose restart redis
+```
+
+### Token JWT inválido / 401 Unauthorized
+
+- Verifique se o token não expirou (validade: 24 h)
+- Certifique-se de incluir o prefixo `Bearer ` (com espaço)
+- Confirme que `jwt.secret` é o mesmo usado na geração do token
+
+### `spring.jpa.hibernate.ddl-auto=update` em produção
+
+> ⚠️ Em produção, altere para `validate` e gerencie as migrações com **Flyway** ou **Liquibase**.
+
+---
+
+## 🤝 Contribuindo
+
+1. **Fork** o repositório
+2. **Crie** uma branch: `git checkout -b feature/MinhaFeature`
+3. **Commit**: `git commit -m 'feat: adiciona MinhaFeature'`
+4. **Push**: `git push origin feature/MinhaFeature`
+5. **Abra** um Pull Request
+
+### Padrões
+
+- Siga as convenções Java (nomes em camelCase, classes em PascalCase)
+- Adicione JavaDoc em métodos públicos de serviço
+- Escreva testes para novas features
+- Mantenha controllers finos — lógica de negócio nos services
+
+---
+
+## 📝 Licença
+
+Este projeto está sob licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+---
+
+## 📧 Suporte
+
+- Abra uma **Issue** no repositório
+- Consulte a **documentação Swagger** em `http://localhost:8080/swagger-ui`
 
 ---
 
 ## 📚 Referências
 
 - [Spring Boot Documentation](https://spring.io/projects/spring-boot)
-- [Spring Security](https://spring.io/projects/spring-security)
-- [JWT Introduction](https://jwt.io)
+- [Spring Security Reference](https://docs.spring.io/spring-security/reference/)
+- [JJWT (io.jsonwebtoken)](https://github.com/jwtk/jjwt)
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [Redis Documentation](https://redis.io/documentation)
-- [OpenAPI/Swagger](https://swagger.io/)
+- [Redis Documentation](https://redis.io/docs/)
+- [SpringDoc OpenAPI](https://springdoc.org/)
 
 ---
 
-**Última Atualização:** 18 de Março de 2026
-
-**Desenvolvido com ❤️ usando Spring Boot e Java 21**
-
+**Última Atualização:** 25 de Março de 2026
