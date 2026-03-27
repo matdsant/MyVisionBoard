@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -44,10 +45,21 @@ public class NoteController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get note by ID")
-    public ResponseEntity<Note> findById(@PathVariable String id) {
+    public ResponseEntity<?> findById(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String id) {
+        User user = userService.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found."));
         return noteService.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+                .map(note -> {
+                    if (!note.getUser().getId().equals(user.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(new MessageResponse("Access denied."));
+                    }
+                    return ResponseEntity.ok(note);
+                })
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new MessageResponse("Note not found.")));
     }
 
     @PostMapping
@@ -67,7 +79,7 @@ public class NoteController {
                 saved.getId(),
                 saved.getTitle(),
                 saved.getContent(),
-                null,
+                new HashSet<>(),
                 saved.getCreatedAt(),
                 saved.getUpdatedAt()
         );
@@ -75,12 +87,19 @@ public class NoteController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Atualizar nota")
-    public ResponseEntity<NoteResponse> update(
+    @Operation(summary = "Update note")
+    public ResponseEntity<?> update(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable String id,
             @RequestBody NoteRequest request) {
+        User user = userService.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found."));
         return noteService.findById(id)
                 .map(existing -> {
+                    if (!existing.getUser().getId().equals(user.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(new MessageResponse("Access denied."));
+                    }
                     existing.setTitle(request.getTitle());
                     existing.setContent(request.getContent());
                     Note saved = noteService.save(existing);
@@ -93,18 +112,27 @@ public class NoteController {
                             saved.getUpdatedAt()
                     ));
                 })
-                .orElse(ResponseEntity.notFound().build());
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new MessageResponse("Note not found.")));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete note")
-    public ResponseEntity<MessageResponse> delete(@PathVariable String id) {
+    public ResponseEntity<MessageResponse> delete(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable String id) {
+        User user = userService.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found."));
         return noteService.findById(id)
                 .map(existing -> {
+                    if (!existing.getUser().getId().equals(user.getId())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(new MessageResponse("Access denied."));
+                    }
                     noteService.deleteById(id);
                     return ResponseEntity.ok(new MessageResponse("Note deleted successfully."));
                 })
-                .orElse(ResponseEntity.status(404)
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(new MessageResponse("Note not found.")));
     }
 }
