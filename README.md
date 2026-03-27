@@ -18,10 +18,15 @@ Uma API RESTful moderna para gerenciar seu quadro de visão pessoal, permitindo 
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Modelo de Dados](#modelo-de-dados)
 - [Autenticação](#autenticação)
+- [CORS](#cors)
 - [Documentação Interativa](#documentação-interativa)
 - [Docker](#docker)
 - [Desenvolvimento](#desenvolvimento)
+- [Troubleshooting](#troubleshooting)
 - [Contribuindo](#contribuindo)
+- [Licença](#licença)
+- [Suporte](#suporte)
+- [Referências](#referências)
 
 ---
 
