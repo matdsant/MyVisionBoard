@@ -33,7 +33,7 @@ MyVisionBoard é uma plataforma que permite aos usuários:
 - 🏷️ **Organizar com tags** — Categorize suas notas com etiquetas reutilizáveis
 - 👤 **Autenticação segura** — Sistema de login/registro com JWT tokens stateless
 - 🔐 **Spring Security** — Segurança em nível de aplicação com BCrypt
-- 🔄 **Redis** — Infraestrutura de cache distribuído configurada e pronta
+- 🔄 **Redis** — Rate limiting distribuído (10 req/min em `/auth`, 100 req/min por usuário na API)
 - 📖 **Swagger/OpenAPI** — Documentação interativa disponível em `/swagger-ui`
 
 ---
@@ -105,49 +105,48 @@ mvn clean install -DskipTests
 
 ## ⚙️ Configuração
 
-### Arquivo: `src/main/resources/application.properties`
+As variáveis sensíveis são carregadas via arquivo `.env` na raiz do projeto (nunca commitado). Use `.env.example` como ponto de partida:
+
+```bash
+cp .env.example .env
+```
+
+### Arquivo: `.env`
 
 ```properties
-# Aplicação
-spring.application.name=myvisionboard
-server.port=8080
-server.servlet.encoding.charset=UTF-8
-server.servlet.encoding.enabled=true
-server.servlet.encoding.force=true
+DB_URL=jdbc:postgresql://localhost:5432/myvisionboard
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
 
-# Banco de Dados PostgreSQL
-spring.datasource.url=jdbc:postgresql://localhost:5432/myvisionboard
-spring.datasource.username=postgres
-spring.datasource.password=postgres
-spring.datasource.driver-class-name=org.postgresql.Driver
+JWT_SECRET=your-strong-secret-key-here
+JWT_EXPIRATION=86400000
 
-# JPA e Hibernate
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
 
-# Redis
-spring.data.redis.host=localhost
-spring.data.redis.port=6379
+### Arquivo: `src/main/resources/application.properties`
 
-# JWT
-jwt.secret=myvisionboard-secret-key-troque-por-uma-chave-segura
-jwt.expiration=86400000   # 24 horas em milissegundos
+As propriedades sensíveis referenciam as variáveis do `.env`:
 
-# Swagger UI
-springdoc.swagger-ui.path=/swagger-ui
-springdoc.swagger-ui.tags-sorter=alpha
-springdoc.writer-with-default-pretty-printer=true
-springdoc.swagger-ui.disable-swagger-default-url=true
+```properties
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+
+jwt.secret=${JWT_SECRET}
+jwt.expiration=${JWT_EXPIRATION}
+
+spring.data.redis.host=${REDIS_HOST}
+spring.data.redis.port=${REDIS_PORT}
 ```
 
 ### ⚠️ Configurações Importantes para Produção
 
 | Propriedade | Ação recomendada |
 |---|---|
-| `jwt.secret` | Substitua por uma chave forte e aleatória (mínimo 256 bits) |
-| `spring.datasource.password` | Use credenciais seguras |
+| `JWT_SECRET` | Use uma chave forte e aleatória (mínimo 256 bits) |
+| `DB_PASSWORD` | Use credenciais seguras |
 | `spring.jpa.hibernate.ddl-auto` | Altere para `validate` |
 | `spring.jpa.show-sql` | Defina como `false` |
 | `logging.level.org.springframework` | Reduza para `WARN` ou `ERROR` |
@@ -349,7 +348,7 @@ Content-Type: application/json
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "title": "Nova Nota",
   "content": "Conteúdo da nota",
-  "tags": null,
+  "tags": [],
   "createdAt": "2026-03-25T10:30:00",
   "updatedAt": "2026-03-25T10:30:00"
 }
@@ -561,7 +560,7 @@ src/
 │   ├── java/com/myvisionboard/app/
 │   │   ├── Application.java                 # Ponto de entrada Spring Boot
 │   │   ├── config/
-│   │   │   ├── RateLimitConfig.java        # Rate limiting (atualmente desabilitado)
+│   │   │   ├── RateLimitConfig.java        # Rate limiting por IP (auth) e por usuário (API)
 │   │   │   ├── RedisConfig.java            # Template Redis
 │   │   │   ├── SwaggerConfig.java          # Configuração OpenAPI/Swagger
 │   │   │   └── WebConfig.java              # CORS (permite localhost:3000)
@@ -605,8 +604,9 @@ src/
 │       └── application.properties
 ├── test/java/...
 pom.xml
-docker-compose.yaml
-dockerfile
+Dockerfile
+docker-compose.yml
+.env.example
 ```
 
 ---
@@ -756,7 +756,7 @@ RUN mvn clean package -DskipTests
 # Stage 2: Runtime
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-COPY --from=build /app/target/myvisionboard-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
@@ -766,25 +766,51 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 ```yaml
 services:
   postgres:
-    image: postgres:16
-    container_name: myvisionboard-postgres
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: myvisionboard
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d myvisionboard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
-    image: redis:7
-    container_name: myvisionboard-redis
+    image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/myvisionboard
+      REDIS_HOST: redis
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  redis_data:
 ```
 
 ### Comandos Docker
@@ -846,6 +872,7 @@ mvn test -Dtest=ApplicationTests
 | postgresql | runtime | Driver JDBC |
 | lombok | — | Boilerplate |
 | springdoc-openapi-starter-webmvc-ui | 2.8.6 | Swagger/OpenAPI |
+| spring-dotenv | 4.0.0 | Carregamento de variáveis do `.env` |
 
 ### IDEs Recomendadas
 
@@ -939,4 +966,4 @@ Este projeto está sob licença MIT. Veja o arquivo `LICENSE` para mais detalhes
 
 ---
 
-**Última Atualização:** 25 de Março de 2026
+**Última Atualização:** 27 de Março de 2026
